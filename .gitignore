@@ -477,3 +477,9 @@ $RECYCLE.BIN/
 *.lnk
 
 /csvdata
+
+.env
+
+*.db
+*.db-shm
+*.db-wal

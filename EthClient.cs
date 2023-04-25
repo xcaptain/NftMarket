@@ -10,7 +10,9 @@ using System.Numerics;
 using Nethereum.RPC.Eth.DTOs;
 using System.Text.Json;
 using Nethereum.BlockchainProcessing.Processor;
-using Nethereum.BlockchainStore.Csv;
+using Nethereum.BlockchainStore.EFCore.Sqlite;
+using Nethereum.BlockchainStore.EFCore.Repositories;
+using Nethereum.BlockchainStore.EFCore;
 
 public class EthClient
 {
@@ -28,24 +30,28 @@ public class EthClient
         var contractCreations = new List<ContractCreationVO>();
         var filterLogs = new List<FilterLogVO>();
 
-        var processor = web3.Processing.Blocks.CreateBlockProcessor(steps =>
-        {
-            steps.BlockStep.AddSynchronousProcessorHandler(b => blocks.Add(b));
-            steps.TransactionReceiptStep.AddSynchronousProcessorHandler(tx => transactions.Add(tx));
-            steps.ContractCreationStep.AddSynchronousProcessorHandler(cc => contractCreations.Add(cc));
-            steps.FilterLogStep.AddSynchronousProcessorHandler(l => filterLogs.Add(l));
-        });
+        var context = new SqliteBlockchainDbContextFactory($"Data Source=nft_market.db");
+        var repoFactory = new BlockchainStoreRepositoryFactory(context);
+        
+        // var processor = web3.Processing.Blocks.CreateBlockProcessor(steps =>
+        // {
+        //     steps.BlockStep.AddSynchronousProcessorHandler(b => blocks.Add(b));
+        //     steps.TransactionReceiptStep.AddSynchronousProcessorHandler(tx => transactions.Add(tx));
+        //     steps.ContractCreationStep.AddSynchronousProcessorHandler(cc => contractCreations.Add(cc));
+        //     steps.FilterLogStep.AddSynchronousProcessorHandler(l => filterLogs.Add(l));
+        // });
 
-        // var processor = this.web3.Processing.Blocks.CreateBlockStorageProcessor(repoFactory);
+        var processor = this.web3.Processing.Blocks.CreateBlockStorageProcessor(repoFactory);
 
         //if we need to stop the processor mid execution - call cancel on the token
         var cancellationToken = new CancellationToken();
 
         //crawl the required block range
-        await processor.ExecuteAsync(
-          toBlockNumber: new BigInteger(3269520),
-          cancellationToken: cancellationToken,
-          startAtBlockNumberIfNotProcessed: new BigInteger(3269520));
+        // await processor.ExecuteAsync(
+        //   toBlockNumber: new BigInteger(3269520),
+        //   cancellationToken: cancellationToken,
+        //   startAtBlockNumberIfNotProcessed: new BigInteger(3269520));
+        await processor.ExecuteAsync(cancellationToken: cancellationToken);
 
         Console.WriteLine($"Blocks Found: {blocks.Count}");
         Console.WriteLine($"Transactions Found: {transactions.Count}");
