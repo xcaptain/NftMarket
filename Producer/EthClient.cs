@@ -44,9 +44,17 @@ public class EthClient
 
         var processor = this.web3.Processing.Blocks.CreateBlockStorageProcessor(repoFactory, configureSteps: steps =>
         {
-            steps.BlockStep.AddSynchronousProcessorHandler(b => producer.Produce("raw_blocks", new Message<string, string> { Key = b.Number.Value.ToString(), Value = JsonSerializer.Serialize(b) }));
-            steps.TransactionReceiptStep.AddSynchronousProcessorHandler(tx => producer.Produce("raw_txs", new Message<string, string> { Key = tx.TransactionHash, Value = JsonSerializer.Serialize(tx) }));
-            steps.FilterLogStep.AddSynchronousProcessorHandler(l => producer.Produce("raw_logs", new Message<string, string> { Key = l.Log.TransactionHash, Value = JsonSerializer.Serialize(l) }));
+            steps.BlockStep.AddSynchronousProcessorHandler(b =>
+            {
+                Console.WriteLine("block: " + b.Number.Value.ToString());
+                producer.Produce("raw_blocks", new Message<string, string> { Key = b.Number.Value.ToString(), Value = JsonSerializer.Serialize(b) });
+            });
+            steps.TransactionReceiptStep.AddSynchronousProcessorHandler(tx =>
+            {
+                Console.WriteLine($"tx: {tx.TransactionHash}");
+                producer.Produce("raw_txs", new Message<string, string> { Key = tx.TransactionHash.ToString(), Value = JsonSerializer.Serialize(tx) });
+            });
+            steps.FilterLogStep.AddSynchronousProcessorHandler(l => producer.Produce("raw_logs", new Message<string, string> { Key = l.Log.TransactionHash.ToString(), Value = JsonSerializer.Serialize(l) }));
         });
 
         //if we need to stop the processor mid execution - call cancel on the token
@@ -57,7 +65,7 @@ public class EthClient
         //   toBlockNumber: new BigInteger(3269520),
         //   cancellationToken: cancellationToken,
         //   startAtBlockNumberIfNotProcessed: new BigInteger(3269520));
-        await processor.ExecuteAsync(cancellationToken: cancellationToken);
+        await processor.ExecuteAsync(startAtBlockNumberIfNotProcessed: 2800000, cancellationToken: cancellationToken);
 
         // Console.WriteLine($"Blocks Found: {blocks.Count}");
         // Console.WriteLine($"Transactions Found: {transactions.Count}");
@@ -84,28 +92,3 @@ public class EthClient
     }
 }
 
-[Event("Transfer")]
-public class TransferEvent1 : IEventDTO
-{
-    [Parameter("address", "_from", 1, true)]
-    public string From { get; set; }
-
-    [Parameter("address", "_to", 2, true)]
-    public string To { get; set; }
-
-    [Parameter("uint256", "_value", 3, false)]
-    public BigInteger Value { get; set; }
-}
-
-[Event("Transfer")]
-public class TransferEvent2 : IEventDTO
-{
-    [Parameter("address", "_from", 1, true)]
-    public string From { get; set; }
-
-    [Parameter("address", "_to", 2, true)]
-    public string To { get; set; }
-
-    [Parameter("uint256", "_value", 3, true)]
-    public BigInteger Value { get; set; }
-}
