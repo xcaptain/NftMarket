@@ -6,8 +6,10 @@ using Nethereum.Contracts;
 using Nethereum.RPC.Eth.DTOs;
 
 Dictionary<string, string> configs =
-    new Dictionary<string, string>();
-configs.Add("bootstrap.servers", "localhost:19092");
+    new()
+    {
+        { "bootstrap.servers", "localhost:19092" }
+    };
 configs["group.id"] = "kafka-dotnet-getting-started2";
 configs["auto.offset.reset"] = "earliest";
 
@@ -30,15 +32,20 @@ using (var consumer = new ConsumerBuilder<string, string>(
             if (cr.Topic == "raw_logs")
             {
                 var l = JsonSerializer.Deserialize<FilterLogVO>(cr.Message.Value);
-                if (l.IsLogForEvent<TransferEvent1>())
+                if (l.IsLogForEvent<Erc721TransferEvent>())
                 {
-                    var logEvent = l.Log.DecodeEvent<TransferEvent1>();
-                    Console.WriteLine($"event1: from: {logEvent.Event.From}, to: {logEvent.Event.To}, value: {logEvent.Event.Value}");
+                    var logEvent = l.Log.DecodeEvent<Erc721TransferEvent>();
+                    Console.WriteLine($"Erc721TransferEvent: from: {logEvent.Event.From}, to: {logEvent.Event.To}, value: {logEvent.Event.Value}");
                 }
-                else if (l.IsLogForEvent<TransferEvent2>())
+                else if (l.IsLogForEvent<Erc721Erc20LikeTransfer>())
                 {
-                    var logEvent = l.Log.DecodeEvent<TransferEvent2>();
-                    Console.WriteLine($"event2: from: {logEvent.Event.From}, to: {logEvent.Event.To}, value: {logEvent.Event.Value}");
+                    var logEvent = l.Log.DecodeEvent<Erc721Erc20LikeTransfer>();
+                    Console.WriteLine($"Erc721Erc20LikeTransfer: from: {logEvent.Event.From}, to: {logEvent.Event.To}, value: {logEvent.Event.Value}");
+                }
+                else if (l.IsLogForEvent<Erc721LikeTransfer>())
+                {
+                    var logEvent = l.Log.DecodeEvent<Erc721LikeTransfer>();
+                    Console.WriteLine($"Erc721LikeTransfer: from: {logEvent.Event.From}, to: {logEvent.Event.To}, value: {logEvent.Event.Value}");
                 }
                 else
                 {
@@ -55,7 +62,7 @@ using (var consumer = new ConsumerBuilder<string, string>(
 }
 
 [Event("Transfer")]
-public class TransferEvent1 : IEventDTO
+public class Erc721TransferEvent : IEventDTO
 {
     [Parameter("address", "_from", 1, true)]
     public string From { get; set; }
@@ -63,12 +70,27 @@ public class TransferEvent1 : IEventDTO
     [Parameter("address", "_to", 2, true)]
     public string To { get; set; }
 
+    [Parameter("uint256", "_value", 3, true)]
+    public BigInteger Value { get; set; }
+}
+
+
+
+[Event("Transfer")]
+public class Erc721LikeTransfer : IEventDTO
+{
+    [Parameter("address", "_from", 1, false)]
+    public string From { get; set; }
+
+    [Parameter("address", "_to", 2, false)]
+    public string To { get; set; }
+
     [Parameter("uint256", "_value", 3, false)]
     public BigInteger Value { get; set; }
 }
 
 [Event("Transfer")]
-public class TransferEvent2 : IEventDTO
+public class Erc721Erc20LikeTransfer : IEventDTO
 {
     [Parameter("address", "_from", 1, true)]
     public string From { get; set; }

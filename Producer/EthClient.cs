@@ -1,3 +1,5 @@
+namespace Producer;
+
 using Nethereum.Web3;
 using Nethereum.ABI.FunctionEncoding.Attributes;
 using Nethereum.Contracts.CQS;
@@ -14,14 +16,51 @@ using Nethereum.BlockchainStore.EFCore.Sqlite;
 using Nethereum.BlockchainStore.EFCore.Repositories;
 using Nethereum.BlockchainStore.EFCore;
 using Confluent.Kafka;
+using Nethereum.BlockchainProcessing.BlockStorage.Entities.Mapping;
+using Nethereum.ABI;
+using Nethereum.ABI.FunctionEncoding;
+
+
+
+[Event("Transfer")]
+public class Erc721TransferEventData : IEventDTO
+{
+    [Parameter("address", name: null, order: 1, indexed: true)]
+    public string From { get; set; }
+    [Parameter("address", name: null, order: 2, indexed: true)]
+    public string To { get; set; }
+    [Parameter("uint256", name: null, order: 3, indexed: true)]
+    public BigInteger TokenId { get; set; }
+}
 
 public class EthClient
 {
-    private IWeb3 web3;
+    private readonly IWeb3 web3;
 
     public EthClient(IWeb3 web3)
     {
         this.web3 = web3;
+    }
+
+    public async Task ParseEvents(int blockNumber)
+    {
+        var erc721TransferHandler = new EventLogProcessorHandler<Erc721TransferEventData>(eventLog => {
+            Console.WriteLine($"event1: from: {eventLog.Event.From}, to: {eventLog.Event.To}, value: {eventLog.Event.TokenId}");
+        });
+        var processingHandlers = new ProcessorHandler<FilterLog>[] {erc721TransferHandler};
+
+
+        // var processor = web3.Processing.Logs.CreateProcessor(action: log =>
+        // {
+        //     if(log.IsLogForEvent<Erc721TransferEventData>())
+        //     {
+        //         var log1 = log.DecodeEvent<Erc721TransferEventData>();
+        //         Console.WriteLine($"event1: from: {log1.Event.From}, to: {log1.Event.To}, value: {log1.Event.TokenId}");
+        //     }
+        // });
+        var processor = web3.Processing.Logs.CreateProcessor(processingHandlers);
+        var cancellationToken = new CancellationToken();
+        await processor.ExecuteAsync(toBlockNumber: blockNumber, startAtBlockNumberIfNotProcessed: blockNumber, cancellationToken: cancellationToken);
     }
 
     public async Task CrawlBlocks(IProducer<string, string> producer)
@@ -65,7 +104,7 @@ public class EthClient
         //   toBlockNumber: new BigInteger(3269520),
         //   cancellationToken: cancellationToken,
         //   startAtBlockNumberIfNotProcessed: new BigInteger(3269520));
-        await processor.ExecuteAsync(startAtBlockNumberIfNotProcessed: 2800000, cancellationToken: cancellationToken);
+        await processor.ExecuteAsync(startAtBlockNumberIfNotProcessed: 18063043, cancellationToken: cancellationToken);
 
         // Console.WriteLine($"Blocks Found: {blocks.Count}");
         // Console.WriteLine($"Transactions Found: {transactions.Count}");

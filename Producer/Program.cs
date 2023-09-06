@@ -1,12 +1,15 @@
 ﻿using Nethereum.Web3;
 using Confluent.Kafka;
+using Producer;
 
-var web3 = new Web3("https://sepolia.infura.io/v3/886f9a612855454696499897ae97d905");
+var web3 = new Web3("https://rpc.ankr.com/eth");
 var client = new EthClient(web3);
 
 Dictionary<string, string> configs =
-    new Dictionary<string, string>();
-configs.Add("bootstrap.servers", "localhost:19092");
+    new()
+    {
+        { "bootstrap.servers", "localhost:19092" }
+    };
 
 
 using (var producer = new ProducerBuilder<string, string>(
@@ -15,3 +18,5 @@ using (var producer = new ProducerBuilder<string, string>(
     await client.CrawlBlocks(producer);
     producer.Flush(TimeSpan.FromSeconds(10));
 }
+
+// await client.ParseEvents(18063043);
